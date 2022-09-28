@@ -12,8 +12,8 @@ namespace SimpleBotCore.Bot
         readonly static ChannelAccount BotAccount = new ChannelAccount(id: "bot01", name: "Bot", role: RoleTypes.Bot);
 
         string _userId;
-        ChannelAccount _userAccount;
-        ConversationAccount _conversationid;
+        protected ChannelAccount _userAccount;
+        protected ConversationAccount _conversationid;
         Uri _serviceUrl;
         BotDialogMessages _messages = new BotDialogMessages();
 

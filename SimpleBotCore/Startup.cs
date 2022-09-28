@@ -1,17 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using SimpleBotCore.Bot;
 using SimpleBotCore.Logic;
 using SimpleBotCore.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SimpleBotCore
 {
@@ -27,7 +23,15 @@ namespace SimpleBotCore
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton(_ =>
+            {
+                var connectionString = Configuration.GetConnectionString("MongoDb");
+                var client = new MongoClient(connectionString);
+                return client.GetDatabase("Bot");
+            });
+
             services.AddSingleton<IUserProfileRepository>(new UserProfileMockRepository());
+            services.AddSingleton<IBotConversationLogRepository<BsonDocument>, BotConversationLogMongoRepository>();
             services.AddSingleton<IBotDialogHub, BotDialogHub>();
             services.AddSingleton<BotDialog, SimpleBot>();
 

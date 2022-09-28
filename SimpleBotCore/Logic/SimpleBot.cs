@@ -1,19 +1,23 @@
-﻿using SimpleBotCore.Bot;
+﻿using MongoDB.Bson;
+using SimpleBotCore.Bot;
 using SimpleBotCore.Repositories;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SimpleBotCore.Logic
 {
     public class SimpleBot : BotDialog
     {
-        IUserProfileRepository _userProfile;
+        private readonly IUserProfileRepository _userProfile;
+        private readonly IBotConversationLogRepository<BsonDocument> _botConversationLog;
 
-        public SimpleBot(IUserProfileRepository userProfile)
+        public SimpleBot(
+            IUserProfileRepository userProfile,
+            IBotConversationLogRepository<BsonDocument> botConversationLog)
         {
             _userProfile = userProfile;
+            _botConversationLog = botConversationLog;
         }
 
         protected async override Task BotConversation()
@@ -28,7 +32,7 @@ namespace SimpleBotCore.Logic
 
             await WriteAsync("Boa noite!");
 
-            if( user.Nome != null && user.Idade != 0 && user.Cor != null )
+            if (user.Nome != null && user.Idade != 0 && user.Cor != null)
             {
                 await WriteAsync(
                     $"{user.Nome}, de {user.Idade} anos, " +
@@ -36,7 +40,7 @@ namespace SimpleBotCore.Logic
             }
 
 
-            if( user.Nome == null )
+            if (user.Nome == null)
             {
                 await WriteAsync("Qual o seu nome?");
 
@@ -65,23 +69,36 @@ namespace SimpleBotCore.Logic
 
             await WriteAsync($"{user.Nome}, bem vindo ao Oraculo. Você tem direito a 3 perguntas");
 
-            for(int i=0; i<3; i++)
+            for (int i = 0; i < 3; i++)
             {
-                string texto = await ReadAsync();
+                await ProcessInputQuestionAsync(user);
+            }
+        }
 
-                if( texto.EndsWith("?") )
+        private async Task ProcessInputQuestionAsync(SimpleUser user)
+        {
+            string texto = await ReadAsync();
+
+            if (texto.EndsWith("?"))
+            {
+                await WriteAsync("Processando...");
+
+                var @event = JsonSerializer.Serialize(new
                 {
-                    await WriteAsync("Processando...");
+                    BotId = _userAccount.Id,
+                    ConversationId = _conversationid.Id,
+                    UserId = user.Id,
+                    UserName = user.Nome,
+                    SendedMessage = texto,
+                    SendedAt = DateTime.Now,
+                });
+                await _botConversationLog.RegisterEventAsync(BsonDocument.Parse(@event));
 
-                    // FAZER: GRAVAR AS PERGUNTAS EM UM BANCO DE DADOS
-                    await Task.Delay(5000);
-
-                    await WriteAsync("Resposta não encontrada");
-                }
-                else
-                {
-                    await WriteAsync("Você disse: " + texto);
-                }
+                await WriteAsync("Resposta não encontrada");
+            }
+            else
+            {
+                await WriteAsync("Você disse: " + texto);
             }
         }
     }
